@@ -322,6 +322,69 @@ QLineEdit:focus {{
     border: 1.5px solid {t.accent};
 }}
 
+/* Combo Box (e.g. Key Type dropdown) */
+QComboBox {{
+    background-color: #F5F5F5;
+    color: #111111;
+    border: 1px solid {t.border_strong};
+    border-radius: 9px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+}}
+
+QComboBox:hover {{
+    border-color: {t.accent_dim};
+}}
+
+QComboBox:focus {{
+    border: 1.5px solid {t.accent};
+}}
+
+QComboBox::drop-down {{
+    border: none;
+    width: 24px;
+}}
+
+QComboBox QAbstractItemView {{
+    background-color: #F5F5F5;
+    color: #111111;
+    border: 1px solid {t.border_strong};
+    selection-background-color: {t.accent_dim};
+    selection-color: #111111;
+    outline: none;
+    padding: 4px;
+}}
+
+/* Spin Box (e.g. Quantity) */
+QSpinBox {{
+    background-color: #F5F5F5;
+    color: #111111;
+    border: 1px solid {t.border_strong};
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+}}
+
+QSpinBox:hover {{
+    border-color: {t.accent_dim};
+}}
+
+QSpinBox:focus {{
+    border: 1.5px solid {t.accent};
+}}
+
+QSpinBox::up-button, QSpinBox::down-button {{
+    background-color: #E5E5E5;
+    border: none;
+    width: 18px;
+}}
+
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+    background-color: #D5D5D5;
+}}
+
 /* Table Widget (Live Preview) */
 QTableWidget {{
     background-color: {t.bg_input};
@@ -526,7 +589,7 @@ class LicenseDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Offset Auto Renamer — Activation")
-        self.setFixedSize(440, 640)
+        self.setFixedSize(440, 710)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.unlocked = False
 
@@ -563,6 +626,19 @@ class LicenseDialog(QDialog):
         self.key_input.textChanged.connect(self._format_key_input)
         self.key_input.returnPressed.connect(self.try_unlock)
         layout.addWidget(self.key_input)
+
+        hwid_input_label = QLabel("Your System ID (copy it from below, then paste it here)")
+        hwid_input_label.setObjectName("SubLabel")
+        hwid_input_label.setAlignment(Qt.AlignCenter)
+        hwid_input_label.setWordWrap(True)
+        layout.addWidget(hwid_input_label)
+
+        self.hwid_input = QLineEdit()
+        self.hwid_input.setPlaceholderText("XXXX-XXXX-XXXX")
+        self.hwid_input.setAlignment(Qt.AlignCenter)
+        self.hwid_input.textChanged.connect(self._format_hwid_input)
+        self.hwid_input.returnPressed.connect(self.try_unlock)
+        layout.addWidget(self.hwid_input)
 
         self.status_label = QLabel(" ")
         self.status_label.setAlignment(Qt.AlignCenter)
@@ -637,10 +713,30 @@ class LicenseDialog(QDialog):
             self.key_input.setCursorPosition(len(cleaned))
         self.key_input.blockSignals(False)
 
+    def _format_hwid_input(self, text: str):
+        cleaned = text.upper()
+        cursor_at_end = self.hwid_input.cursorPosition() == len(text)
+        self.hwid_input.blockSignals(True)
+        self.hwid_input.setText(cleaned)
+        if cursor_at_end:
+            self.hwid_input.setCursorPosition(len(cleaned))
+        self.hwid_input.blockSignals(False)
+
     def try_unlock(self):
         key = self.key_input.text().strip()
         if not license_core.is_valid_key(key):
             self.status_label.setText("✗ Invalid key — please check and try again")
+            self.status_label.setStyleSheet(f"color: {DANGER}; font-size: 12px; font-weight: 700;")
+            return
+
+        entered_hwid = self.hwid_input.text().strip().upper()
+        actual_hwid = license_core.get_hwid()
+        if not entered_hwid:
+            self.status_label.setText("✗ Paste your System ID below — copy it from the card underneath")
+            self.status_label.setStyleSheet(f"color: {DANGER}; font-size: 12px; font-weight: 700;")
+            return
+        if entered_hwid != actual_hwid:
+            self.status_label.setText("✗ That System ID doesn't match this device")
             self.status_label.setStyleSheet(f"color: {DANGER}; font-size: 12px; font-weight: 700;")
             return
 
